@@ -1,0 +1,198 @@
+{% extends "layout.html" %}
+{% block head %}
+	<style>
+		.glyphicon.spinning {
+	    animation: spin 1s infinite linear;
+	    -webkit-animation: spin2 1s infinite linear;
+	}
+
+	@keyframes spin {
+	    from { transform: scale(1) rotate(0deg); }
+	    to { transform: scale(1) rotate(360deg); }
+	}
+
+	@-webkit-keyframes spin2 {
+	    from { -webkit-transform: rotate(0deg); }
+	    to { -webkit-transform: rotate(360deg); }
+	}
+	</style>
+
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/canvasjs/1.7.0/canvasjs.min.js"></script>
+	<script>
+		function health_color(h) {
+			if (h == "Healthy") {
+				return '<span class="label label-success label-as-badge">Healthy</span>';
+			} else {
+				return '<span class="label label-danger label-as-badge">' + h + '</span>';
+			}
+		}
+		function create_asg_accordion(ag_name, ag_desired_size, ag_min_size, ag_max_size, ag_instances, k, asg_id) {
+			acc = "";
+			acc += "<h3><a href='#'>" + ag_name + "</a></h3>";
+			acc += "<div>";
+			acc += "<h4><strong>AutoScalingGroup: </strong>" + ag_name + "</h4>";
+			acc += "<ul>";
+			acc += "<dl><strong>Current Size: " + k + " instances</strong></dl>";
+			acc += "<ul>";
+			acc += "<li><strong>Max Size: </strong>" + ag_max_size + " instances</li>";		
+			acc += "<li><strong>Min Size: </strong>" + ag_min_size + " instances</li>";	
+			acc += '<li><strong>Desired Size: ' + ag_desired_size + ' </strong> <i class="glyphicon glyphicon-pencil icon_edit_desired_size" asgId="' + asg_id + '"></i> instance/s</li>';	
+	
+			acc += "</ul>";
+			acc += "</ul>";
+
+			acc += "<table class='table'>";
+			acc += "<thead><td>Instance Id</td><td>Health Status</td><td>AvailabilityZone</td><td>Action</td></thead>";
+			acc += "<tbody>" + ag_instances + "</tbody></table>";
+			acc += "<button asgId='" + asg_id + "' type='button' class='btn btn-sm btn-view-stats'>";
+			acc += "<i id='icon-load-graph_" + asg_id + "' class='glyphicon glyphicon-refresh'></i> Refresh Stats</button>";
+			acc += "<div class='div_metrics' id='stats_vw_" + asg_id +"'></div>";
+			acc += "</div>";
+
+			return acc;
+
+		}
+		function load_stats(id, where, icon) {
+			where.empty();
+			$(icon).addClass('spinning');
+
+			$.getJSON('/api/metrics?metric=GroupMinSize&period=3600&asgid=mybb110-asgmybbautoscalling-SSPYQ0ZS8Y8L', {format: 'json'})
+			.done (function (data) {
+				gdata = [];
+				var w = 0;
+				for (var l = 0, len = data['Datapoints'].length; l < len; l++) {
+					f = data["Datapoints"][l];
+					console.log(f);
+					var datapoint = { x: new Date (f["Timestamp"]), y: Number(f["Average"]) } ;
+					gdata.push(datapoint);
+
+				}
+
+
+				gdata.sort(function(a, b){
+				    var keyA = new Date(a.x),
+				        keyB = new Date(b.x);
+				    // Compare the 2 dates
+				    if(keyA < keyB) return -1;
+				    if(keyA > keyB) return 1;
+				    return 0;
+				});
+
+				console.log(gdata);
+
+				var chart = new CanvasJS.Chart("stats_vw_" + id, {
+					title:{
+						text: "GroupInServiceInstances",
+					},
+					data: [              
+					{
+						// Change type to "doughnut", "line", "splineArea", etc.
+						type: "line",
+						xValueType: "dateTime",
+						dataPoints: gdata,
+					}
+					]
+				});
+				chart.render();
+			});
+
+			$(icon).removeClass('spinning');
+
+
+		}
+		function load_autoscaling(where) {
+			$(where).append(create_asg_accordion("test", 1,2,3, "<tr instanceId='ec234'><td>Instance1</td><td>"+health_color("Healthy") + "</td><td>us-west-x</td><td><button type='button' class='btn btn-sm btn-terminate-instance'><i class='glyphicon glyphicon-trash'></i></button> <button type='button' class='btn btn-sm btn-detach-instance'><i class='glyphicon glyphicon-export'></i></button></td></tr>", 4, "myasg123"));
+			$(where).accordion("refresh");
+			$(where).append(create_asg_accordion("test2", 12,22,32, "<tr instanceId='ec1234'><td>Instance1</td><td>"+health_color("Bad") + "</td><td>us-west-y</td><td><button type='button' class='btn btn-sm btn-terminate-instance'><i class='glyphicon glyphicon-trash'></i></button> <button type='button' class='btn btn-sm btn-detach-instance'><i class='glyphicon glyphicon-export'></i></button></td></tr>", 5, "myasg1234"));
+			$(where).accordion("refresh");
+
+//			return "";
+
+			$.getJSON('/api/autoscaling', {format: 'json'})
+			.done (function (data) {
+				for (var l = 0, len = data['AutoScalingGroups'].length; l < len; l++) {
+						i = data['AutoScalingGroups'][l];
+						ag_name = i["AutoScalingGroupName"];
+						ag_desired_size = i["DesiredCapacity"];
+						ag_min_size = i["MinSize"];
+						ag_max_size = i["MaxSize"];
+						ag_instances = "";
+						k = 0;
+						for (var p = 0, lin = i["Instances"].length; p < lin; p++) {
+							j = i["Instances"][p];
+							k = k + 1
+							ag_instances += "<tr><td instanceid='"+ j["InstanceId"] + "'>" + j["InstanceId"] + "</td><td>" + health_color(j["HealthStatus"]) + "</td><td>" + j["AvailabilityZone"] + "</td><td><button type='button' class='btn btn-sm btn-terminate-instance'><i class='glyphicon glyphicon-trash'></i></button> <button type='button' class='btn btn-sm btn-detach-instance'><i class='glyphicon glyphicon-export'></i></button></td></tr>";
+						}
+						$(where).append(create_asg_accordion(ag_name, ag_desired_size, ag_min_size, ag_max_size, ag_instances, k, i["Tags"]['ResourceId']));
+						$(where).accordion("refresh");
+
+				}
+				$(".icon_edit_desired_size").click(function() {
+					asgid = $(this).attr("asgId");
+					var capacity = prompt("Please enter the new desired size", 3);
+					$.getJSON('/api/asg/desired/' + capacity + "/?asgid=" + asgid, {format: 'json'})
+					.done (function (data) {
+						alert(data);
+					});
+
+				});
+
+				$(".btn-detach-instance").click(function() {
+					instanceid = $(this).parent().parent().attr("instanceid");
+					if (confirm("Are you sure you want to detach instance: " + instanceid)) {
+						$.getJSON('/api/asg/detachinstance/' + instanceid , {format: 'json'})
+						.done (function (data) {
+							alert(data);
+						});
+					}
+				});
+				$(".btn-terminate-instance").click(function() {
+					instanceid = $(this).parent().parent().attr("instanceid");
+					if (confirm("Are you sure you want to detach instance: " + instanceid)) {
+						$.getJSON('/api/asg/terminateinstance/' + instanceid , {format: 'json'})
+						.done (function (data) {
+							alert(data);
+						});
+					}
+				});
+
+				$(".btn-view-stats").click(function() {
+					asgId = $(this).attr("asgId");
+					mydiv = $("#stats_vw_" + $(this).attr("asgId"));
+					icon = "#icon-load-graph_" + asgId; 
+					load_stats(asgId, mydiv, icon);
+				});
+
+
+
+
+			})
+
+
+
+			.fail (function(data) {
+				console.log(data);
+			})
+			.always(function() {
+				$(where).show('slow');
+			});
+
+
+
+		}
+
+		$(document).ready(function () {
+			$("#autoscaling_div").accordion();
+//			$("#autoscaling_div").tabs();
+			load_autoscaling($("#autoscaling_div"));
+		});
+	</script>
+{% endblock %}
+{% block body %}
+	<div id="autoscaling_div" data-role="collapsible-set"> </div>
+	<div id="canvas_graph"> </div>
+
+
+			
+<hr>
+{% endblock %}

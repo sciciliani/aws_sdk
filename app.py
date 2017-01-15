@@ -148,7 +148,7 @@ def get_metrics():
 		        },
 		    ],
 		    StartTime=datetime(2017, 1, 14, 0, 0, 0),
-		    EndTime=datetime(2017, 1, 14, 23, 59, 59),
+		    EndTime=datetime(2017, 1, 15, 23, 59, 59),
 		    Period=int(period),
 		    Statistics=[
 		        'Average'

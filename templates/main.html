@@ -37,8 +37,8 @@
 		var metrics = [ "GroupInServiceInstances" , "GroupMinSize", "GroupMaxSize", "GroupDesiredCapacity", "GroupPendingInstances", "GroupStandbyInstances", "GroupTerminatingInstances", "GroupTotalInstances"]
 
 		function health_color(h) {
-			if (h == "Healthy") {
-				return '<span class="label label-success label-as-badge">Healthy</span>';
+			if (h == "InService") {
+				return '<span class="label label-success label-as-badge">' + h + '</span>';
 			} else {
 				return '<span class="label label-danger label-as-badge">' + h + '</span>';
 			}
@@ -135,11 +135,11 @@
 						for (var p = 0, lin = i["Instances"].length; p < lin; p++) {
 							j = i["Instances"][p];
 							k = k + 1
-							ag_instances += "<tr instanceid='"+ j["InstanceId"] + "'><td>" + j["InstanceId"] + "</td><td>" + health_color(j["HealthStatus"]) + "</td><td>" + j["AvailabilityZone"] + "</td><td><button type='button' class='btn btn-sm btn-terminate-instance'><i class='glyphicon glyphicon-trash'></i></td></tr>";
+							ag_instances += "<tr instanceid='"+ j["InstanceId"] + "'><td>" + j["InstanceId"] + "</td><td>" + health_color(j["LifecycleState"]) + "</td><td>" + j["AvailabilityZone"] + "</td><td><button type='button' class='btn btn-sm btn-terminate-instance'><i class='glyphicon glyphicon-trash'></i></td></tr>";
 						}
 						create_asg_tab(ag_name, ag_desired_size, ag_min_size, ag_max_size, ag_instances, k);
 						document.getElementById("startTime" + ag_name).defaultValue = "2017-01-14T00:00:00.000";
-						document.getElementById("endTime" + ag_name).defaultValue = "2017-01-14T23:59:59.999";
+						document.getElementById("endTime" + ag_name).defaultValue = "2017-01-15T23:59:59.999";
 				}
 				$(".icon_edit_desired_size").click(function() {
 					asgid = $(this).attr("asgId");

@@ -1,3 +1,4 @@
+import botocore.session
 import boto3
 import config
 import pprint
@@ -6,7 +7,6 @@ import json
 
 cfg = config.params['ignite']
 
-session = boto3.Session(profile_name='ignite')
 
 def datetime_handler(x):
     if isinstance(x, datetime.datetime):
@@ -27,10 +27,15 @@ def s3():
 
 def main():
 #	get_ec2_instances()
-	get_autoscalinggroups()
+#	get_autoscalinggroups()
 #	asgid = "mybb110-asgmybbautoscalling-SSPYQ0ZS8Y8L"
 #	metricname = "GroupMaxSize"
 #	get_cw_metrics(asgid, metricname)
+#	dynamo_create_table()
+#	dynamo_use_table()
+#	dynamo_put_item()
+#	dynamo_get_item()
+	dynamo_list_tables()
 
 def dump(obj):
 	for attr in dir(obj):
@@ -84,5 +89,82 @@ def get_cw_metrics(asgid, metricname):
 
 	print json.dumps(response, default=datetime_handler)
 
+
+def dynamo_create_table():
+	client = boto3.client('dynamodb', region_name='us-west-1', aws_access_key_id=cfg['aws_access_key_id'], aws_secret_access_key=cfg['aws_secret_access_key'])
+	response = client.create_table(
+    		TableName='users',
+    		KeySchema=[
+        		{
+	            		'AttributeName': 'username',
+        	    		'KeyType': 'HASH'
+        		},
+        		{
+            			'AttributeName': 'password',
+            			'KeyType': 'RANGE'
+        		}
+    		],
+		    AttributeDefinitions=[
+        		{
+		            'AttributeName': 'username',
+		            'AttributeType': 'S'
+        		},
+        		{
+		            'AttributeName': 'password',
+		            'AttributeType': 'S'
+		        },
+
+    		],
+    		ProvisionedThroughput={
+		        'ReadCapacityUnits': 5,
+		        'WriteCapacityUnits': 5
+		    }
+		)
+
+	print json.dumps(response, default=datetime_handler)
+
+
+def dynamo_use_table():
+	dynamodb = boto3.resource('dynamodb')
+	table = dynamodb.Table('users')
+
+	print(table.creation_date_time)
+
+def dynamo_put_item():
+	client = boto3.client('dynamodb', region_name='us-west-1', aws_access_key_id=cfg['aws_access_key_id'], aws_secret_access_key=cfg['aws_secret_access_key'])
+	response = client.put_item(
+	   TableName="users",
+	   Item={ 'username': 'admin',
+        	'first_name': 'Santiago',
+        	'last_name': 'Ciciliani',
+        	'age': 32,
+        	'account_type': 'administrator',
+		'password': 'letmein'
+	    }
+	)
+	print json.dumps(response, default=datetime_handler)
+
+def dynamo_get_item():
+	dynamodb = boto3.resource('dynamodb')
+	table = dynamodb.Table('users')
+	response = table.get_item(
+    	Key={
+        	'username': 'admin',
+        	'password': 'password1'
+    	}
+	)
+	item = response['Item']
+	print(item)
+
+def dynamo_delete_table():
+	dynamodb = boto3.resource('dynamodb')
+	table = dynamodb.Table('users')
+	table.delete()
+
+def dynamo_list_tables():
+	client = boto3.client('dynamodb', region_name='us-west-1', aws_access_key_id=cfg['aws_access_key_id'], aws_secret_access_key=cfg['aws_secret_access_key'])
+	response = client.list_tables()
+	print json.dumps(response, default=datetime_handler)
+	
 if  __name__ =='__main__':main()
 

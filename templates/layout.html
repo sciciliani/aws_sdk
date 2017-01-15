@@ -17,7 +17,14 @@
 <script src="https://code.jquery.com/jquery-1.12.4.js"></script>
 <script src="https://code.jquery.com/ui/1.12.1/jquery-ui.js"></script>
 <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js" integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa" crossorigin="anonymous"></script>
+<style>
 
+.btn-grande {
+  height: 50px;
+}
+body { padding-top: 70px; }
+
+</style>
 
 {% block head %}
 {% endblock %}
@@ -29,14 +36,39 @@
 
     <div class="container">
       <div class="header clearfix">
-        <nav>
-          <ul class="nav nav-pills pull-right">
-            <li role="presentation" class="active"><a href="#">Home</a></li>
-            <li role="presentation"><a href="#">About</a></li>
-            <li role="presentation"><a href="#">Contact</a></li>
-          </ul>
+
+        <nav class="navbar navbar-inverse navbar-fixed-top">
+          <div class="container">
+            <div class="navbar-header">
+              <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar" aria-expanded="false" aria-controls="navbar">
+                <span class="sr-only">Toggle navigation</span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+              </button>
+              <a class="navbar-brand" href="#"><h4>MyBB Cluster Manager</h4></a>
+            </div>
+            <div id="navbar" class="navbar-collapse collapse">
+              <div class="navbar-form navbar-right">
+              {% if not session.logged_in %}
+                <button type="submit" class="btn btn-success btn-grande" onclick="document.location.href='/login'">Log in</button>
+              {% else %}
+                <ul class="nav navbar-nav" >
+                  <li class="dropdown">
+                    <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">{{ session.username }} <span class="caret"></span></a>
+                    <ul class="dropdown-menu">
+                      <li><a href="/logout">Logout</a></li>
+                    </ul>
+                  </li>
+                </ul>
+
+              {% endif %}
+              </div>
+            </div><!--/.navbar-collapse -->
+          </div>
         </nav>
-        <h3 class="text-muted">MyBB Manager</h3>
+
+
       </div>
       {% block body %}{% endblock %}
   </div>

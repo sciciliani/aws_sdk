@@ -27,10 +27,10 @@ def s3():
 
 def main():
 #	get_ec2_instances()
-#	get_autoscalinggroups()
-	asgid = "mybb110-asgmybbautoscalling-SSPYQ0ZS8Y8L"
-	metricname = "GroupMaxSize"
-	get_cw_metrics(asgid, metricname)
+	get_autoscalinggroups()
+#	asgid = "mybb110-asgmybbautoscalling-SSPYQ0ZS8Y8L"
+#	metricname = "GroupMaxSize"
+#	get_cw_metrics(asgid, metricname)
 
 def dump(obj):
 	for attr in dir(obj):

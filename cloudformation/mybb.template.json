@@ -1,0 +1,1090 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Resources": {
+    "vpc63608704": {
+      "Type": "AWS::EC2::VPC",
+      "Properties": {
+        "CidrBlock": "10.0.0.0/16",
+        "InstanceTenancy": "default",
+        "EnableDnsSupport": "true",
+        "EnableDnsHostnames": "false",
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": "myBB"
+          }
+        ]
+      }
+    },
+    "subnet78be2f52": {
+      "Type": "AWS::EC2::Subnet",
+      "Properties": {
+        "CidrBlock": "10.0.1.0/24",
+        "AvailabilityZone": "us-west-1b",
+        "VpcId": {
+          "Ref": "vpc63608704"
+        },
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": "mybb-public-subnet-b"
+          }
+        ]
+      }
+    },
+    "subnet0235ab5a": {
+      "Type": "AWS::EC2::Subnet",
+      "Properties": {
+        "CidrBlock": "10.0.4.0/24",
+        "AvailabilityZone": "us-west-1c",
+        "VpcId": {
+          "Ref": "vpc63608704"
+        },
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": "mybb-private-subnet-c"
+          }
+        ]
+      }
+    },
+    "subnet80be2faa": {
+      "Type": "AWS::EC2::Subnet",
+      "Properties": {
+        "CidrBlock": "10.0.2.0/24",
+        "AvailabilityZone": "us-west-1b",
+        "VpcId": {
+          "Ref": "vpc63608704"
+        },
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": "mybb-private-subnet-b"
+          }
+        ]
+      }
+    },
+    "subnet1a35ab42": {
+      "Type": "AWS::EC2::Subnet",
+      "Properties": {
+        "CidrBlock": "10.0.3.0/24",
+        "AvailabilityZone": "us-west-1c",
+        "VpcId": {
+          "Ref": "vpc63608704"
+        },
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": "mybb-public-subnet-c"
+          }
+        ]
+      }
+    },
+    "igwe1811085": {
+      "Type": "AWS::EC2::InternetGateway",
+      "Properties": {
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": "mybb-internet-gw"
+          }
+        ]
+      }
+    },
+    "doptf49a0c91": {
+      "Type": "AWS::EC2::DHCPOptions",
+      "Properties": {
+        "DomainName": "ec2.internal",
+        "DomainNameServers": [
+          "AmazonProvidedDNS"
+        ]
+      }
+    },
+    "acl2bc7004c": {
+      "Type": "AWS::EC2::NetworkAcl",
+      "Properties": {
+        "VpcId": {
+          "Ref": "vpc63608704"
+        }
+      }
+    },
+    "rtb410d9326": {
+      "Type": "AWS::EC2::RouteTable",
+      "Properties": {
+        "VpcId": {
+          "Ref": "vpc63608704"
+        },
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": "myBB-public-route-table"
+          }
+        ]
+      }
+    },
+    "rtb38158b5f": {
+      "Type": "AWS::EC2::RouteTable",
+      "Properties": {
+        "VpcId": {
+          "Ref": "vpc63608704"
+        },
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": "myBB-default-route-table"
+          }
+        ]
+      }
+    },
+    "elbmybbwebloadbalancer": {
+      "Type": "AWS::ElasticLoadBalancing::LoadBalancer",
+      "Properties": {
+        "Subnets": [
+          {
+            "Ref": "subnet1a35ab42"
+          },
+          {
+            "Ref": "subnet78be2f52"
+          }
+        ],
+        "HealthCheck": {
+          "HealthyThreshold": "10",
+          "Interval": "30",
+          "Target": "HTTP:80/hb.html",
+          "Timeout": "5",
+          "UnhealthyThreshold": "2"
+        },
+        "ConnectionDrainingPolicy": {
+          "Enabled": "true",
+          "Timeout": "300"
+        },
+        "ConnectionSettings": {
+          "IdleTimeout": "60"
+        },
+        "CrossZone": "true",
+        "Instances": [
+
+        ],
+        "SecurityGroups": [
+          {
+            "Ref": "sgmyBBwebsecuritygroup"
+          }
+        ],
+        "Listeners": [
+          {
+            "InstancePort": "80",
+            "LoadBalancerPort": "80",
+            "Protocol": "HTTP",
+            "InstanceProtocol": "HTTP"
+          }
+        ]
+      }
+    },
+    "asgmybbautoscalling": {
+      "Type": "AWS::AutoScaling::AutoScalingGroup",
+      "CreationPolicy": {
+        "ResourceSignal": { "Timeout": "PT15M" },
+          "AutoScalingCreationPolicy" : { "MinSuccessfulInstancesPercent" : 0 },
+      },
+      "UpdatePolicy": { 
+        "AutoScalingRollingUpdate": { "MinInstancesInService": 0, "MaxBatchSize": 1, "PauseTime": "PT15M", "WaitOnResourceSignals": "False" }
+      },
+      "Properties": {
+        "AvailabilityZones": [
+          "us-west-1c",
+          "us-west-1b"
+        ],
+        "Cooldown": "300",
+        "DesiredCapacity": { "Ref": "NodeCount" },
+        "HealthCheckGracePeriod": "300",
+        "HealthCheckType": "ELB",
+        "MaxSize": "10",
+        "MinSize": "0",
+        "VPCZoneIdentifier": [ { "Ref": "subnet78be2f52" }, { "Ref": "subnet1a35ab42" } ],
+        "LaunchConfigurationName": { "Ref": "lcmybblaunchconfiguration" },
+        "MetricsCollection": [ { "Granularity": "1Minute" } ],
+        "LoadBalancerNames": [ 
+          { "Ref": "elbmybbwebloadbalancer" }
+        ],
+        "NotificationConfigurations": [
+          {
+            "TopicARN": { "Ref": "NotificationTopic" },
+            "NotificationTypes": [
+              "autoscaling:EC2_INSTANCE_LAUNCH",
+              "autoscaling:EC2_INSTANCE_LAUNCH_ERROR",
+              "autoscaling:EC2_INSTANCE_TERMINATE",
+              "autoscaling:EC2_INSTANCE_TERMINATE_ERROR"
+            ]
+          }
+        ],
+        "TerminationPolicies": [
+          "Default"
+        ]
+      }
+    },
+    "lcmybblaunchconfiguration": {
+      "Type": "AWS::AutoScaling::LaunchConfiguration",
+      "Metadata": {
+        "Comment": "Install required packages and deploy MyBB config & code.",
+        "AWS::CloudFormation::Init": {
+          "configSets": { 
+            "Launch": [ "Launch" ]
+          },
+          "Launch": {
+            "packages": {
+              "yum": {
+                "httpd": [],
+                "php": [],
+                "php-mysql": [],
+                "php-pecl-memcache": [],
+                "php-xcache": [],
+                "mysql": []
+              }
+            },
+
+            "sources": {
+              "/tmp/setup": "https://s3.amazonaws.com/mybb-deploy/node-setup-env.tgz"
+            },
+            "commands": {
+              "install": {
+                "command": "/bin/bash /tmp/setup/node-setup-env.sh",
+                "cwd": "/tmp/setup",
+                "env": {
+                  "ADMIN_EMAIL": { "Ref": "AdminEmail" },
+                  "FORUM_WEB_URL": { "Fn::GetAtt": [ "elbmybbwebloadbalancer", "DNSName" ] },
+                  "DATABASE_MASTER_USER": { "Ref": "DBMasterUser" },
+                  "DATABASE_MASTER_PASSWORD": { "Ref": "DBMasterPassword" },
+                  "DATABASE_NAME": { "Ref": "DBName" },
+                  "DATABASE_USER": { "Ref": "DBUser" },
+                  "DATABASE_PASSWORD": { "Ref": "DBPassword" },
+                  "DATABASE_MASTER_HOST": { "Fn::GetAtt": [ "rdsmybb", "Endpoint.Address" ] },
+                  "DATABASE_READ_HOST": { "Fn::GetAtt": [ "rdsmybbreadreplica1a", "Endpoint.Address" ] },
+                  "DATABASE_READ_HOST_2": { "Fn::GetAtt": [ "rdsmybbreadreplica1c", "Endpoint.Address" ] },
+                  "MEMCACHE_MASTER_HOST": { "Fn::GetAtt": [ "cachemybbmemcached", "ConfigurationEndpoint.Address" ] }, 
+                  "MEMCACHE_MASTER_PORT": "11211"
+                }
+              }
+            },
+            "services": {
+              "sysvinit": {
+                "httpd": {
+                  "enabled": "true",
+                  "ensureRunning": "true"
+                }
+              }
+            }
+          }
+        }
+      },
+
+      "Properties": {
+        "UserData"       : { "Fn::Base64" : { "Fn::Join" : ["", [
+             "#!/bin/bash -xe\n",
+             "yum update -y aws-cfn-bootstrap\n",
+
+             "# Install the files and packages from the metadata\n",
+             "/opt/aws/bin/cfn-init -v ",
+             "         --stack ", { "Ref" : "AWS::StackName" },
+             "         --resource lcmybblaunchconfiguration ",
+             "         --configsets Launch ",
+             "         --region ", { "Ref" : "AWS::Region" }, "\n"
+        ]]}},
+        "AssociatePublicIpAddress": true,
+        "ImageId": "ami-b73d6cd7",
+        "InstanceType": { "Ref": "NodeSize" },
+        "KeyName": "crossover",
+        "InstanceMonitoring": "true",
+        "SecurityGroups": [
+          {
+            "Ref": "sgmyBBpublicsecgroup"
+          }
+        ],
+        "BlockDeviceMappings": [
+          {
+            "DeviceName": "/dev/xvda",
+            "Ebs": {
+              "VolumeSize": 8
+            }
+          }
+        ]
+      }
+    },
+    "instanceicd10bc50": {
+      "Type": "AWS::EC2::Instance",
+
+      "Metadata": {
+        "Comment": "Install required packages and deploy MyBB database, config, code.",
+        "AWS::CloudFormation::Init": {
+          "configSets": {
+            "Install": [ "Install" ]
+          },
+          "Install": {
+            "packages": {
+              "yum": {
+                "httpd": [],
+                "php": [],
+                "php-mysql": [],
+                "php-pecl-memcache": [],
+                "php-xcache": [],
+                "mysql": []
+              }
+            },
+
+            "sources": {
+              "/tmp/setup": "https://s3.amazonaws.com/mybb-deploy/setup-env.tgz"
+            },
+            "commands": {
+              "install": {
+                "command": "/bin/bash /tmp/setup/setup-env.sh",
+                "cwd": "/tmp/setup",
+                "env": {
+                  "ADMIN_EMAIL": { "Ref": "AdminEmail" },
+                  "FORUM_WEB_URL": { "Fn::GetAtt": [ "elbmybbwebloadbalancer", "DNSName" ] },
+                  "DATABASE_MASTER_USER": { "Ref": "DBMasterUser" },
+                  "DATABASE_MASTER_PASSWORD": { "Ref": "DBMasterPassword" },
+                  "DATABASE_NAME": { "Ref": "DBName" },
+                  "DATABASE_USER": { "Ref": "DBUser" },
+                  "DATABASE_PASSWORD": { "Ref": "DBPassword" },
+                  "DATABASE_MASTER_HOST": { "Fn::GetAtt": [ "rdsmybb", "Endpoint.Address" ] },
+                  "DATABASE_READ_HOST": { "Fn::GetAtt": [ "rdsmybbreadreplica1a", "Endpoint.Address" ] },
+                  "DATABASE_READ_HOST_2": { "Fn::GetAtt": [ "rdsmybbreadreplica1c", "Endpoint.Address" ] },
+                  "MEMCACHE_MASTER_HOST": { "Fn::GetAtt": [ "cachemybbmemcached", "ConfigurationEndpoint.Address" ] }, 
+                  "MEMCACHE_MASTER_PORT": "11211"
+                }
+              }
+            },
+            "services": {
+              "sysvinit": {
+                "httpd": {
+                  "enabled": "true",
+                  "ensureRunning": "true"
+                }
+              }
+            }
+          }
+        }
+      },
+      "Properties": {
+        "UserData"       : { "Fn::Base64" : { "Fn::Join" : ["", [
+             "#!/bin/bash -xe\n",
+             "yum update -y aws-cfn-bootstrap\n",
+
+             "# Install the files and packages from the metadata\n",
+             "/opt/aws/bin/cfn-init -v ",
+             "         --stack ", { "Ref" : "AWS::StackName" },
+             "         --resource instanceicd10bc50 ",
+             "         --configsets Install ",
+             "         --region ", { "Ref" : "AWS::Region" }, "\n"
+        ]]}},
+        "DisableApiTermination": "false",
+        "InstanceInitiatedShutdownBehavior": "stop",
+        "ImageId": "ami-b73d6cd7",
+        "InstanceType": { "Ref": "NodeSize" },
+        "KeyName": "crossover",
+        "Monitoring": "false",
+        "NetworkInterfaces": [
+          {
+            "DeleteOnTermination": "true",
+            "Description": "Primary network interface",
+            "DeviceIndex": 0,
+            "SubnetId": {
+              "Ref": "subnet78be2f52"
+            },
+            "PrivateIpAddresses": [
+              {
+                "PrivateIpAddress": "10.0.1.160",
+                "Primary": "true"
+              }
+            ],
+            "GroupSet": [
+              {
+                "Ref": "sgmyBBpublicsecgroup"
+              }
+            ],
+            "AssociatePublicIpAddress": "true"
+          }
+        ]
+      }
+    },
+    "rdsmybb": {
+      "Type": "AWS::RDS::DBInstance",
+      "Properties": {
+        "AllocatedStorage": "5",
+        "AllowMajorVersionUpgrade": "false",
+        "AutoMinorVersionUpgrade": "true",
+        "DBInstanceClass": "db.t2.micro",
+        "Port": "3306",
+        "StorageType": "gp2",
+        "BackupRetentionPeriod": "7",
+        "MasterUsername": { "Ref": "DBMasterUser" },
+        "MasterUserPassword": { "Ref": "DBMasterPassword" },
+        "PreferredBackupWindow": "04:23-04:53",
+        "PreferredMaintenanceWindow": "tue:03:02-tue:03:32",
+        "DBName": "MyDatabase",
+        "Engine": "mysql",
+        "EngineVersion": "5.6.27",
+        "LicenseModel": "general-public-license",
+        "MultiAZ": "true",
+        "DBSubnetGroupName": {
+          "Ref": "dbsubnetdefaultvpc63608704"
+        },
+        "VPCSecurityGroups": [
+          {
+            "Ref": "sgrdslaunchwizard"
+          }
+        ],
+        "Tags": [
+          {
+            "Key": "workload-type",
+            "Value": "production"
+          }
+        ]
+      }
+    },
+    "rdsmybbreadreplica1a": {
+      "Type": "AWS::RDS::DBInstance",
+      "Properties": {
+        "AllocatedStorage": "5",
+        "AllowMajorVersionUpgrade": "false",
+        "AutoMinorVersionUpgrade": "true",
+        "DBInstanceClass": "db.t2.micro",
+        "Port": "3306",
+        "StorageType": "gp2",
+        "BackupRetentionPeriod": "0",
+        "MasterUsername": { "Ref": "DBMasterUser" },
+        "MasterUserPassword": { "Ref": "DBMasterPassword" },
+        "PreferredBackupWindow": "04:23-04:53",
+        "PreferredMaintenanceWindow": "tue:03:02-tue:03:32",
+        "SourceDBInstanceIdentifier": {
+          "Ref": "rdsmybb"
+        },
+        "VPCSecurityGroups": [
+          {
+            "Ref": "sgrdslaunchwizard"
+          }
+        ]
+      }
+    },
+    "rdsmybbreadreplica1c": {
+      "Type": "AWS::RDS::DBInstance",
+      "Properties": {
+        "AllocatedStorage": "5",
+        "AllowMajorVersionUpgrade": "false",
+        "AutoMinorVersionUpgrade": "true",
+        "DBInstanceClass": "db.t2.micro",
+        "Port": "3306",
+        "StorageType": "gp2",
+        "BackupRetentionPeriod": "0",
+        "MasterUsername": { "Ref": "DBMasterUser" },
+        "MasterUserPassword": { "Ref": "DBMasterPassword" },
+        "PreferredBackupWindow": "04:23-04:53",
+        "PreferredMaintenanceWindow": "tue:03:02-tue:03:32",
+        "SourceDBInstanceIdentifier": {
+          "Ref": "rdsmybb"
+        },
+        "VPCSecurityGroups": [
+          {
+            "Ref": "sgrdslaunchwizard"
+          }
+        ]
+      }
+    },
+    "cachemybbmemcached": {
+      "Type": "AWS::ElastiCache::CacheCluster",
+      "Properties": {
+        "AutoMinorVersionUpgrade": "true",
+        "AZMode": "cross-az",
+        "CacheNodeType": "cache.m3.medium",
+        "Engine": "memcached",
+        "EngineVersion": "1.4.24",
+        "NumCacheNodes": "2",
+        "PreferredAvailabilityZones": [
+            "us-west-1b",
+            "us-west-1c"
+        ],
+        "PreferredMaintenanceWindow": "wed:05:30-wed:06:30",
+        "CacheSubnetGroupName": {
+          "Ref": "cachesubnetmybbelasticache"
+        },
+        "VpcSecurityGroupIds": [
+          {
+            "Fn::GetAtt": [
+              "sgmybbmemcachedsecgroup",
+              "GroupId"
+            ]
+          }
+        ]
+      }
+    },
+    "dbsubnetdefaultvpc63608704": {
+      "Type": "AWS::RDS::DBSubnetGroup",
+      "Properties": {
+        "DBSubnetGroupDescription": "Created from the RDS Management Console",
+        "SubnetIds": [
+          {
+            "Ref": "subnet0235ab5a"
+          },
+          {
+            "Ref": "subnet80be2faa"
+          }
+        ]
+      }
+    },
+    "cachesubnetmybbelasticache": {
+      "Type": "AWS::ElastiCache::SubnetGroup",
+      "Properties": {
+        "Description": "mybb memcached cluster",
+        "SubnetIds": [
+          {
+            "Ref": "subnet0235ab5a"
+          },
+          {
+            "Ref": "subnet80be2faa"
+          }
+        ]
+      }
+    },
+    "sgdefault": {
+      "Type": "AWS::EC2::SecurityGroup",
+      "Properties": {
+        "GroupDescription": "default VPC security group",
+        "VpcId": {
+          "Ref": "vpc63608704"
+        }
+      }
+    },
+    "sgmybbmemcachedsecgroup": {
+      "Type": "AWS::EC2::SecurityGroup",
+      "Properties": {
+        "GroupDescription": "mybb memcached (port 11211)",
+        "VpcId": {
+          "Ref": "vpc63608704"
+        }
+      }
+    },
+    "sgmyBBprivatesecgroup": {
+      "Type": "AWS::EC2::SecurityGroup",
+      "Properties": {
+        "GroupDescription": "Access from Backends to Database",
+        "VpcId": {
+          "Ref": "vpc63608704"
+        },
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": "myBB-private-sec-group"
+          }
+        ]
+      }
+    },
+    "sgmyBBpublicsecgroup": {
+      "Type": "AWS::EC2::SecurityGroup",
+      "Properties": {
+        "GroupDescription": "Public Security group (Ports: 443, 80)",
+        "VpcId": {
+          "Ref": "vpc63608704"
+        },
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": "myBB-public-sec-group"
+          }
+        ]
+      }
+    },
+    "sgmyBBwebsecuritygroup": {
+      "Type": "AWS::EC2::SecurityGroup",
+      "Properties": {
+        "GroupDescription": "Opening only port 80 for Web load balancer",
+        "VpcId": {
+          "Ref": "vpc63608704"
+        },
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": "myBB-load-balancer-sec-group"
+          }
+        ]
+      }
+    },
+    "sgrdslaunchwizard": {
+      "Type": "AWS::EC2::SecurityGroup",
+      "Properties": {
+        "GroupDescription": "Created from the RDS Management Console",
+        "VpcId": {
+          "Ref": "vpc63608704"
+        },
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": "myBB-rds-sec-group"
+          }
+        ]
+      }
+    },
+    "acl3": {
+      "Type": "AWS::EC2::NetworkAclEntry",
+      "Properties": {
+        "CidrBlock": "0.0.0.0/0",
+        "Egress": "true",
+        "Protocol": "-1",
+        "RuleAction": "allow",
+        "RuleNumber": "100",
+        "NetworkAclId": {
+          "Ref": "acl2bc7004c"
+        }
+      }
+    },
+    "acl4": {
+      "Type": "AWS::EC2::NetworkAclEntry",
+      "Properties": {
+        "CidrBlock": "0.0.0.0/0",
+        "Protocol": "-1",
+        "RuleAction": "allow",
+        "RuleNumber": "100",
+        "NetworkAclId": {
+          "Ref": "acl2bc7004c"
+        }
+      }
+    },
+    "subnetacl5": {
+      "Type": "AWS::EC2::SubnetNetworkAclAssociation",
+      "Properties": {
+        "NetworkAclId": {
+          "Ref": "acl2bc7004c"
+        },
+        "SubnetId": {
+          "Ref": "subnet80be2faa"
+        }
+      }
+    },
+    "subnetacl6": {
+      "Type": "AWS::EC2::SubnetNetworkAclAssociation",
+      "Properties": {
+        "NetworkAclId": {
+          "Ref": "acl2bc7004c"
+        },
+        "SubnetId": {
+          "Ref": "subnet1a35ab42"
+        }
+      }
+    },
+    "subnetacl7": {
+      "Type": "AWS::EC2::SubnetNetworkAclAssociation",
+      "Properties": {
+        "NetworkAclId": {
+          "Ref": "acl2bc7004c"
+        },
+        "SubnetId": {
+          "Ref": "subnet0235ab5a"
+        }
+      }
+    },
+    "subnetacl8": {
+      "Type": "AWS::EC2::SubnetNetworkAclAssociation",
+      "Properties": {
+        "NetworkAclId": {
+          "Ref": "acl2bc7004c"
+        },
+        "SubnetId": {
+          "Ref": "subnet78be2f52"
+        }
+      }
+    },
+    "gw2": {
+      "Type": "AWS::EC2::VPCGatewayAttachment",
+      "Properties": {
+        "VpcId": {
+          "Ref": "vpc63608704"
+        },
+        "InternetGatewayId": {
+          "Ref": "igwe1811085"
+        }
+      }
+    },
+    "subnetroute6": {
+      "Type": "AWS::EC2::SubnetRouteTableAssociation",
+      "Properties": {
+        "RouteTableId": {
+          "Ref": "rtb410d9326"
+        },
+        "SubnetId": {
+          "Ref": "subnet1a35ab42"
+        }
+      }
+    },
+    "subnetroute7": {
+      "Type": "AWS::EC2::SubnetRouteTableAssociation",
+      "Properties": {
+        "RouteTableId": {
+          "Ref": "rtb410d9326"
+        },
+        "SubnetId": {
+          "Ref": "subnet78be2f52"
+        }
+      }
+    },
+    "subnetroute9": {
+      "Type": "AWS::EC2::SubnetRouteTableAssociation",
+      "Properties": {
+        "RouteTableId": {
+          "Ref": "rtb38158b5f"
+        },
+        "SubnetId": {
+          "Ref": "subnet80be2faa"
+        }
+      }
+    },
+    "subnetroute10": {
+      "Type": "AWS::EC2::SubnetRouteTableAssociation",
+      "Properties": {
+        "RouteTableId": {
+          "Ref": "rtb38158b5f"
+        },
+        "SubnetId": {
+          "Ref": "subnet0235ab5a"
+        }
+      }
+    },
+    "route2": {
+      "Type": "AWS::EC2::Route",
+      "Properties": {
+        "DestinationCidrBlock": "0.0.0.0/0",
+        "RouteTableId": {
+          "Ref": "rtb410d9326"
+        },
+        "GatewayId": {
+          "Ref": "igwe1811085"
+        }
+      },
+      "DependsOn": "gw2"
+    },
+    "dchpassoc2": {
+      "Type": "AWS::EC2::VPCDHCPOptionsAssociation",
+      "Properties": {
+        "VpcId": {
+          "Ref": "vpc63608704"
+        },
+        "DhcpOptionsId": {
+          "Ref": "doptf49a0c91"
+        }
+      }
+    },
+    "ingress10": {
+      "Type": "AWS::EC2::SecurityGroupIngress",
+      "Properties": {
+        "GroupId": {
+          "Ref": "sgdefault"
+        },
+        "IpProtocol": "-1",
+        "SourceSecurityGroupId": {
+          "Ref": "sgdefault"
+        },
+        "SourceSecurityGroupOwnerId": "775372386427"
+      }
+    },
+    "ingress11": {
+      "Type": "AWS::EC2::SecurityGroupIngress",
+      "Properties": {
+        "GroupId": {
+          "Ref": "sgmybbmemcachedsecgroup"
+        },
+        "IpProtocol": "tcp",
+        "FromPort": "11211",
+        "ToPort": "11211",
+        "CidrIp": "10.0.1.0/24"
+      }
+    },
+    "ingress12": {
+      "Type": "AWS::EC2::SecurityGroupIngress",
+      "Properties": {
+        "GroupId": {
+          "Ref": "sgmybbmemcachedsecgroup"
+        },
+        "IpProtocol": "tcp",
+        "FromPort": "11211",
+        "ToPort": "11211",
+        "CidrIp": "10.0.3.0/24"
+      }
+    },
+    "ingress13": {
+      "Type": "AWS::EC2::SecurityGroupIngress",
+      "Properties": {
+        "GroupId": {
+          "Ref": "sgmyBBprivatesecgroup"
+        },
+        "IpProtocol": "tcp",
+        "FromPort": "3306",
+        "ToPort": "3306",
+        "SourceSecurityGroupId": {
+          "Ref": "sgmyBBpublicsecgroup"
+        },
+        "SourceSecurityGroupOwnerId": "775372386427"
+      }
+    },
+    "ingress14": {
+      "Type": "AWS::EC2::SecurityGroupIngress",
+      "Properties": {
+        "GroupId": {
+          "Ref": "sgmyBBpublicsecgroup"
+        },
+        "IpProtocol": "tcp",
+        "FromPort": "80",
+        "ToPort": "80",
+        "CidrIp": "0.0.0.0/0"
+      }
+    },
+    "ingress15": {
+      "Type": "AWS::EC2::SecurityGroupIngress",
+      "Properties": {
+        "GroupId": {
+          "Ref": "sgmyBBpublicsecgroup"
+        },
+        "IpProtocol": "tcp",
+        "FromPort": "22",
+        "ToPort": "22",
+        "CidrIp": "0.0.0.0/0"
+      }
+    },
+    "ingress16": {
+      "Type": "AWS::EC2::SecurityGroupIngress",
+      "Properties": {
+        "GroupId": {
+          "Ref": "sgmyBBpublicsecgroup"
+        },
+        "IpProtocol": "tcp",
+        "FromPort": "443",
+        "ToPort": "443",
+        "CidrIp": "0.0.0.0/0"
+      }
+    },
+    "ingress17": {
+      "Type": "AWS::EC2::SecurityGroupIngress",
+      "Properties": {
+        "GroupId": {
+          "Ref": "sgmyBBwebsecuritygroup"
+        },
+        "IpProtocol": "tcp",
+        "FromPort": "80",
+        "ToPort": "80",
+        "CidrIp": "0.0.0.0/0"
+      }
+    },
+    "ingress18": {
+      "Type": "AWS::EC2::SecurityGroupIngress",
+      "Properties": {
+        "GroupId": {
+          "Ref": "sgrdslaunchwizard"
+        },
+        "IpProtocol": "tcp",
+        "FromPort": "3306",
+        "ToPort": "3306",
+        "SourceSecurityGroupId": {
+          "Ref": "sgmyBBpublicsecgroup"
+        },
+        "SourceSecurityGroupOwnerId": "775372386427"
+      }
+    },
+    "egress7": {
+      "Type": "AWS::EC2::SecurityGroupEgress",
+      "Properties": {
+        "GroupId": {
+          "Ref": "sgdefault"
+        },
+        "IpProtocol": "-1",
+        "CidrIp": "0.0.0.0/0"
+      }
+    },
+    "egress8": {
+      "Type": "AWS::EC2::SecurityGroupEgress",
+      "Properties": {
+        "GroupId": {
+          "Ref": "sgmybbmemcachedsecgroup"
+        },
+        "IpProtocol": "-1",
+        "CidrIp": "0.0.0.0/0"
+      }
+    },
+    "egress9": {
+      "Type": "AWS::EC2::SecurityGroupEgress",
+      "Properties": {
+        "GroupId": {
+          "Ref": "sgmyBBprivatesecgroup"
+        },
+        "IpProtocol": "-1",
+        "CidrIp": "0.0.0.0/0"
+      }
+    },
+    "egress10": {
+      "Type": "AWS::EC2::SecurityGroupEgress",
+      "Properties": {
+        "GroupId": {
+          "Ref": "sgmyBBpublicsecgroup"
+        },
+        "IpProtocol": "-1",
+        "CidrIp": "0.0.0.0/0"
+      }
+    },
+    "egress11": {
+      "Type": "AWS::EC2::SecurityGroupEgress",
+      "Properties": {
+        "GroupId": {
+          "Ref": "sgmyBBwebsecuritygroup"
+        },
+        "IpProtocol": "-1",
+        "CidrIp": "0.0.0.0/0"
+      }
+    },
+    "egress12": {
+      "Type": "AWS::EC2::SecurityGroupEgress",
+      "Properties": {
+        "GroupId": {
+          "Ref": "sgrdslaunchwizard"
+        },
+        "IpProtocol": "-1",
+        "CidrIp": "0.0.0.0/0"
+      }
+    },
+
+    "NotificationTopic": {
+      "Type": "AWS::SNS::Topic",
+      "Properties": {
+        "Subscription": [
+          { "Endpoint": { "Ref": "AdminEmail" }, "Protocol": "email" }
+        ]
+      }
+    },
+
+
+    "WWWAsgScaleUpPolicy": {
+      "Type": "AWS::AutoScaling::ScalingPolicy",
+      "Properties": {
+        "AutoScalingGroupName": { "Ref": "asgmybbautoscalling" },
+        "AdjustmentType": "ChangeInCapacity",
+        "ScalingAdjustment": 1,
+        "Cooldown": 60
+      }
+    },
+    "WWWAsgScaleDownPolicy": {
+      "Type": "AWS::AutoScaling::ScalingPolicy",
+      "Properties": {
+        "AutoScalingGroupName": { "Ref": "asgmybbautoscalling" },
+        "AdjustmentType": "ChangeInCapacity",
+        "ScalingAdjustment": -1,
+        "Cooldown": 60
+      }
+    },
+    "WWWCpuHighAlarm": {
+     "Type": "AWS::CloudWatch::Alarm",
+     "Properties": {
+        "AlarmDescription": "When CPU usage exceeds 90% for 10 minutes, scale-up!",
+        "Namespace": "AWS/EC2",
+        "MetricName": "CPUUtilization",
+        "Statistic": "Average",
+        "Period": "300",
+        "EvaluationPeriods": "2",
+        "Threshold": "90",
+        "ComparisonOperator": "GreaterThanThreshold",
+        "Dimensions": [
+          {
+            "Name": "AutoScalingGroupName",
+            "Value": { "Ref": "asgmybbautoscalling" }
+          }
+        ],
+        "AlarmActions": [
+          { "Ref": "WWWAsgScaleUpPolicy" }
+        ]
+      }
+    },
+    "WWWCpuLowAlarm": {
+     "Type": "AWS::CloudWatch::Alarm",
+     "Properties": {
+        "AlarmDescription": "When CPU usage is below 50% for 10 minutes, scale-down!",
+        "Namespace": "AWS/EC2",
+        "MetricName": "CPUUtilization",
+        "Statistic": "Average",
+        "Period": "300",
+        "EvaluationPeriods": "2",
+        "Threshold": "50",
+        "ComparisonOperator": "LessThanThreshold",
+        "Dimensions": [
+          {
+            "Name": "AutoScalingGroupName",
+            "Value": { "Ref": "asgmybbautoscalling" }
+          }
+        ],
+        "AlarmActions": [
+          { "Ref": "WWWAsgScaleDownPolicy" }
+        ]
+      }
+    }
+
+
+
+
+
+  },
+  "Description": "AWS CloudFormation Template for MyBB Forum Cluster with LoadBalancer, AutoScale, Database Cluster and Memcached",
+  "Parameters": {
+    "AdminEmail": {
+      "Type": "String",
+      "Description": "MyBB Admin email address",
+      "Default": "santiago.ciciliani@gmail.com",
+      "AllowedPattern": "\\w[a-zA-Z0-9_\\-\\.]*@\\w[a-zA-Z0-9\\-\\.]*",
+      "ConstraintDescription": "Must be a valid email address!"
+    },
+    "DBName": {
+      "Type": "String",
+      "Description": "MyBB Database Name",
+      "Default": "mybb"
+    },
+    "DBPort": {
+      "Type": "String",
+      "Description": "MyBB Database Port",
+      "Default": "3306"
+    },
+    "DBMasterUser": {
+      "Type": "String",
+      "Description": "RDS Master Username",
+      "Default": "master"
+    },
+    "DBMasterPassword": {
+      "Type": "String",
+      "Description": "RDS Master Password (default: 4ur0r4MyBB)",
+      "Default": "4ur0r4MyBB",
+      "NoEcho": "true"
+    },
+    "DBUser": {
+      "Type": "String",
+      "Description": "Database Username",
+      "Default": "mybb"
+    },
+    "DBPassword": {
+      "Type": "String",
+      "Description": "MyBB DB User Password (default: mybbP4ssw0rd)",
+      "Default": "mybbP4ssw0rd",
+      "NoEcho": "true"
+    },
+    "NodeCount": {
+      "Type": "Number",
+      "Description": "Number of initial instances to launch",
+      "Default": "2"
+    },
+    "NodeSize": {
+      "Type": "String",
+      "Description": "Size of the Webserver Instances",
+      "AllowedValues" : [ "t2.micro", "t2.small", "t2.medium", "t2.large", "m4.large", "m4.xlarge", "m4.2xlarge", "m4.4xlarge", "m4.10xlarge", "m3.medium", "m3.large", "m3.xlarge", "m3.2xlarge", "c4.large", "c4.xlarge", "c4.2xlarge", "c4.4xlarge", "c4.8xlarge", "c3.large", "c3.xlarge", "c3.2xlarge", "c3.4xlarge", "c3.8xlarge", "r3.large", "r3.xlarge", "r3.2xlarge", "r3.4xlarge", "r3.8xlarge" ],
+      "ConstraintDescription" : "must be a valid EC2 instance type"
+    }
+  },
+  "Outputs" : {
+    "LoadBalancerDNSName" : {
+      "Description": "Url to connect to MyBB",  
+      "Value" : { "Fn::GetAtt" : [ "elbmybbwebloadbalancer", "DNSName" ]}
+    },
+    "Backend1" : {
+      "Description": "Backend EC2 Instance",  
+      "Value" : { "Ref" : "instanceicd10bc50" }
+    }
+  }
+}

@@ -32,7 +32,7 @@ def login():
 @app.route("/logout")
 def logout():
 	session.pop('logged_in', None)
-	return redirect(app.url_for('root'))
+	return redirect(url_for('root'))
 
 @app.route("/main")
 def main():
@@ -59,26 +59,56 @@ def get_autoscaling():
 		return json.dumps(response, default=datetime_handler)
 	else:
 		return redirect(url_for('login'))
+@app.route("/api/test/<mynumber>/do")
+def test(mynumber):
+	return mynumber
 
-@app.route("/api/asg/desired/<capacity>")
-def set_desired(capacity):
+@app.route("/api/asg/<asgid>/desired")
+def set_desired(asgid):
 	if 'logged_in' in session:
-		asgid = request.args.get('asgid')
+		capacity = request.args.get('desired')
 
 		client = boto3.client('autoscaling', region_name='us-west-1', aws_access_key_id=cfg['aws_access_key_id'], aws_secret_access_key=cfg['aws_secret_access_key'])
-		response = client.set_desired_capacity(AutoScalingGroupName=asgid,    DesiredCapacity=int(capacity))
+		response = client.set_desired_capacity(AutoScalingGroupName=asgid, DesiredCapacity=int(capacity))
+		print response
 
+		return json.dumps(response, default=datetime_handler)
+	else:
+		return redirect(url_for('login'))
+
+@app.route("/api/asg/<asgid>/minsize")
+def set_minsize(asgid):
+	if 'logged_in' in session:
+		capacity = request.args.get('minsize')
+
+		client = boto3.client('autoscaling', region_name='us-west-1', aws_access_key_id=cfg['aws_access_key_id'], aws_secret_access_key=cfg['aws_secret_access_key'])
+		response = client.update_auto_scaling_group(AutoScalingGroupName=asgid, MinSize=int(capacity))
+		print response
+
+		return json.dumps(response, default=datetime_handler)
+	else:
+		return redirect(url_for('login'))
+
+@app.route("/api/asg/<asgid>/maxsize")
+def set_maxsize(asgid):
+	if 'logged_in' in session:
+		capacity = request.args.get('maxsize')
+
+		client = boto3.client('autoscaling', region_name='us-west-1', aws_access_key_id=cfg['aws_access_key_id'], aws_secret_access_key=cfg['aws_secret_access_key'])
+		response = client.update_auto_scaling_group(AutoScalingGroupName=asgid, MaxSize=int(capacity))
+		print response
 
 		return json.dumps(response, default=datetime_handler)
 	else:
 		return redirect(url_for('login'))
 
 
+
 @app.route("/api/asg/terminateinstance/<instance>")
 def terminate_instace(instance):
 	if 'logged_in' in session:
 		client = boto3.client('autoscaling', region_name='us-west-1', aws_access_key_id=cfg['aws_access_key_id'], aws_secret_access_key=cfg['aws_secret_access_key'])
-		response =client.terminate_instance_in_auto_scaling_group(  InstanceIds=[ instance ], ShouldDecrementDesiredCapacity=True )
+		response =client.terminate_instance_in_auto_scaling_group(  InstanceId=instance, ShouldDecrementDesiredCapacity=False )
 		
 		return json.dumps(response, default=datetime_handler)
 	else:

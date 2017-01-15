@@ -4,12 +4,12 @@
 
 
       <div class="jumbotron">
-        <h1>MyBB Manager</h1>
-        <p class="lead">Cras justo odio, dapibus ac facilisis in, egestas eget quam. Fusce dapibus, tellus ac cursus commodo, tortor mauris condimentum nibh, ut fermentum massa justo sit amet risus.</p>
+        <h1>MyBB Cluster Manager</h1>
+        <p class="lead">Monitor and manage your cluster infrastructure from a single location without accessing AWS Console</p>
 
 
         {% if not session.logged_in %}
-          <p><a class="btn btn-lg btn-success" href="{{ url_for('login') }}" role="button">Login</a></p>
+          <p><a class="btn btn-lg btn-success" href="{{ url_for('login') }}" role="button">Log in</a></p>
         {% else %}
           <p><a class="btn btn-lg btn-success" href="{{ url_for('main') }}" role="button">Go To Dashboard</a></p>
         {% endif %}
@@ -18,24 +18,24 @@
 
       <div class="row marketing">
         <div class="col-lg-6">
-          <h4>Subheading</h4>
+          <h4>Is Fast</h4>
           <p>Donec id elit non mi porta gravida at eget metus. Maecenas faucibus mollis interdum.</p>
 
-          <h4>Subheading</h4>
+          <h4>Is HTML5</h4>
           <p>Morbi leo risus, porta ac consectetur ac, vestibulum at eros. Cras mattis consectetur purus sit amet fermentum.</p>
 
-          <h4>Subheading</h4>
+          <h4>No AWS knowledge required</h4>
           <p>Maecenas sed diam eget risus varius blandit sit amet non magna.</p>
         </div>
 
         <div class="col-lg-6">
-          <h4>Subheading</h4>
+          <h4>Simple Deploy</h4>
           <p>Donec id elit non mi porta gravida at eget metus. Maecenas faucibus mollis interdum.</p>
 
-          <h4>Subheading</h4>
+          <h4>Access Graphs</h4>
           <p>Morbi leo risus, porta ac consectetur ac, vestibulum at eros. Cras mattis consectetur purus sit amet fermentum.</p>
 
-          <h4>Subheading</h4>
+          <h4>DynamoDB Storage</h4>
           <p>Maecenas sed diam eget risus varius blandit sit amet non magna.</p>
         </div>
       </div>

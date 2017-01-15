@@ -181,7 +181,7 @@ def favicon():
 if __name__ == "__main__":
 	cfg = config.params['ignite']
 	app.secret_key = os.urandom(12)
-	app.run(debug=True)
+	app.run(debug=True, host='0.0.0.0')
 	#app.add_url_rule('/favicon.ico', redirect_to=url_for('static', filename='img/favicon.ico'))
 
 

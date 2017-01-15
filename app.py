@@ -4,6 +4,8 @@ import config
 import json
 import datetime
 from flask import Flask, session, redirect, url_for, escape, request, render_template, flash, Response, send_from_directory
+from boto3.dynamodb.conditions import Key, Attr
+from botocore.exceptions import ClientError
 
 app = Flask(__name__)
 
@@ -20,13 +22,22 @@ def root():
 @app.route('/login', methods=['GET', 'POST'])
 def login():
 	if request.method == 'POST':
-		if request.form['password'] == 'password' and request.form['username'] == 'admin':
-			session['username'] = request.form['username']
-			session['logged_in'] = True
-			return redirect(url_for('main'))
-			#return render_template('main.html')
+		try:
+			dynamodb = boto3.resource('dynamodb')
+			table = dynamodb.Table('users')
+			response = table.get_item(Key={'username': request.form['username'], 'password': request.form['password'] } )
+		except ClientError as e:
+			print(e.response['Error']['Message'])
+			flash('There was a problem connecting with the backend service!')
 		else:
-			flash('Incorrect Username or Password!')
+			if 'Item' in response:
+				item = response['Item']
+				session['username'] = item['username']
+				session['fullname'] = item['name'] + " " + item['lastname']
+				session['logged_in'] = True
+				return redirect(url_for('main'))
+			else:
+				flash('Incorrect Username or Password!')
 	return render_template('login.html')
 
 @app.route("/logout")
@@ -139,21 +150,21 @@ def get_metrics():
 		period = request.args.get('period')
 
 		response = client.get_metric_statistics(
-		    Namespace='AWS/AutoScaling',
-		    MetricName=metric,
-		    Dimensions=[
-		        {
-		            'Name': 'AutoScalingGroupName',
-		            'Value': asgid
-		        },
-		    ],
-		    StartTime=datetime(2017, 1, 14, 0, 0, 0),
-		    EndTime=datetime(2017, 1, 15, 23, 59, 59),
-		    Period=int(period),
-		    Statistics=[
-		        'Average'
-		    ],
-		    Unit='None'
+			Namespace='AWS/AutoScaling',
+			MetricName=metric,
+			Dimensions=[
+				{
+					'Name': 'AutoScalingGroupName',
+					'Value': asgid
+				},
+			],
+			StartTime=datetime(2017, 1, 14, 0, 0, 0),
+			EndTime=datetime(2017, 1, 15, 23, 59, 59),
+			Period=int(period),
+			Statistics=[
+				'Average'
+			],
+			Unit='None'
 		)
 
 		return json.dumps(response, default=datetime_handler)
@@ -169,9 +180,6 @@ def favicon():
 
 if __name__ == "__main__":
 	cfg = config.params['ignite']
-
-
-
 	app.secret_key = os.urandom(12)
 	app.run(debug=True)
 	#app.add_url_rule('/favicon.ico', redirect_to=url_for('static', filename='img/favicon.ico'))
